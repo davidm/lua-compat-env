@@ -1,11 +1,11 @@
 --[[
 
-  compat_load v$(_VERSION) - Lua 5.1/5.2 environment compatibility functions
+  compat_env v$(_VERSION) - Lua 5.1/5.2 environment compatibility functions
 
 SYNOPSIS
 
   -- Get load/loadfile compatibility functions only if using 5.1.
-  local CL = pcall(load, '') and _G or require 'compat_load'
+  local CL = pcall(load, '') and _G or require 'compat_env'
   local load     = CL.load
   local loadfile = CL.loadfile
   
@@ -14,8 +14,8 @@ SYNOPSIS
   assert(loadfile('ex.lua', 't', {print=print}))()
   
   -- Get getfenv/setfenv compatibility functions only if using 5.2.
-  local getfenv = _G.getfenv or require 'compat_load'.getfenv
-  local setfenv = _G.setfenv or require 'compat_load'.setfenv
+  local getfenv = _G.getfenv or require 'compat_env'.getfenv
+  local setfenv = _G.setfenv or require 'compat_env'.setfenv
   local function f() return x end
   setfenv(f, {x=2})
   print(x, getfenv(f).x) --> 2, 2
@@ -29,7 +29,7 @@ DESCRIPTION
  
 API
 
-  local CL = require 'compat_load'
+  local CL = require 'compat_env'
   
   CL.load (ld [, source [, mode [, env] ] ]) --> f [, err]
 
@@ -97,16 +97,16 @@ DESIGN NOTES
 
 INSTALLATION
 
-  Download compat_load.lua:
+  Download compat_env.lua:
   
-    wget https://raw.github.com/gist/1654007/compat_load.lua
+    wget https://raw.github.com/gist/1654007/compat_env.lua
 
-  Copy compat_load.lua into your LUA_PATH.
+  Copy compat_env.lua into your LUA_PATH.
   
   Alternately, unpack, test, and install into LuaRocks:
   
      wget https://raw.github.com/gist/1422205/sourceunpack.lua
-     lua sourceunpack.lua compat_load.lua
+     lua sourceunpack.lua compat_env.lua
      (cd out && luarocks make)
 
 Related work
@@ -145,7 +145,7 @@ THE SOFTWARE.
 
 --]]---------------------------------------------------------------------
 
-local M = {_TYPE='module', _NAME='compat_load', _VERSION='0.1.20120121'}
+local M = {_TYPE='module', _NAME='compat_env', _VERSION='0.2.20120124'}
 
 local function check_chunk_type(s, mode)
   local nmode = mode or 'bt' 
@@ -158,55 +158,57 @@ local function check_chunk_type(s, mode)
   return true
 end
 
--- 5.2 style `load` implemented in 5.1
-local function compat_load(ld, source, mode, env)
-  local f
-  if type(ld) == 'string' then
-    local s = ld
-    local ok, err = check_chunk_type(s, mode); if not ok then return ok, err end
-    local err; f, err = loadstring(s, source); if not f then return f, err end
-  elseif type(ld) == 'function' then
-    local ld2 = ld
-    if (mode or 'bt') ~= 'bt' then
-      local first = ld()
-      local ok, err = check_chunk_type(first, mode); if not ok then return ok, err end
-      ld2 = function()
-        if first then
-          local chunk=first; first=nil; return chunk
-        else return ld() end
+local IS_52_LOAD = pcall(load, '')
+if IS_52_LOAD then
+  M.load     = _G.load
+  M.loadfile = _G.loadfile
+else
+  -- 5.2 style `load` implemented in 5.1
+  function M.load(ld, source, mode, env)
+    local f
+    if type(ld) == 'string' then
+      local s = ld
+      local ok, err = check_chunk_type(s, mode); if not ok then return ok, err end
+      local err; f, err = loadstring(s, source); if not f then return f, err end
+    elseif type(ld) == 'function' then
+      local ld2 = ld
+      if (mode or 'bt') ~= 'bt' then
+        local first = ld()
+        local ok, err = check_chunk_type(first, mode); if not ok then return ok, err end
+        ld2 = function()
+          if first then
+            local chunk=first; first=nil; return chunk
+          else return ld() end
+        end
       end
+      local err; f, err = load(ld2, source); if not f then return f, err end
+    else
+      error(("bad argument #1 to 'load' (function expected, got %s)"):format(type(ld)), 2)
     end
-    local err; f, err = load(ld2, source); if not f then return f, err end
-  else
-    error(("bad argument #1 to 'load' (function expected, got %s)"):format(type(ld)), 2)
-  end
-  if env then setfenv(f, env) end
-  return f
-end
-
--- 5.2 style `loadfile` implemented in 5.1
-local function compat_loadfile(filename, mode, env)
-  if (mode or 'bt') ~= 'bt' then
-    local ioerr
-    local fh, err = io.open(filename, 'rb'); if not fh then return fh, err end
-    local function ld() local chunk; chunk,ioerr = fh:read(4096); return chunk end
-    local f, err = M.load(ld, filename and '@'..filename, mode, env)
-    fh:close()
-    if not f then return f, err end
-    if ioerr then return nil, ioerr end
-    return f
-  else
-    local f, err = loadfile(filename); if not f then return f, err end
     if env then setfenv(f, env) end
     return f
   end
+
+  -- 5.2 style `loadfile` implemented in 5.1
+  function M.loadfile(filename, mode, env)
+    if (mode or 'bt') ~= 'bt' then
+      local ioerr
+      local fh, err = io.open(filename, 'rb'); if not fh then return fh, err end
+      local function ld() local chunk; chunk,ioerr = fh:read(4096); return chunk end
+      local f, err = M.load(ld, filename and '@'..filename, mode, env)
+      fh:close()
+      if not f then return f, err end
+      if ioerr then return nil, ioerr end
+      return f
+    else
+      local f, err = loadfile(filename); if not f then return f, err end
+      if env then setfenv(f, env) end
+      return f
+    end
+  end
 end
 
-local IS_52_LOAD = pcall(load, '')
-M.load     = IS_52_LOAD and _G.load     or compat_load
-M.loadfile = IS_52_LOAD and _G.loadfile or compat_loadfile
-
-if _G._VERSION == 'Lua 5.1' then
+if _G.setfenv then -- Lua 5.1
   M.setfenv = _G.setfenv
   M.getfenv = _G.getfenv
 else -- >= Lua 5.2
@@ -274,11 +276,11 @@ return M
 
 --[[ FILE rockspec.in
 
-package = 'compat_load'
+package = 'compat_env'
 version = '$(_VERSION)-1'
 source = {
-  url = 'https://raw.github.com/gist/1654007/$(GITID)/compat_load.lua',
-  --url = 'https://raw.github.com/gist/1654007/compat_load.lua', -- latest raw
+  url = 'https://raw.github.com/gist/1654007/$(GITID)/compat_env.lua',
+  --url = 'https://raw.github.com/gist/1654007/compat_env.lua', -- latest raw
   --url = 'https://gist.github.com/gists/1654007/download',
   md5 = '$(MD5)'
 }
@@ -298,7 +300,7 @@ dependencies = {}  -- Lua 5.1 or 5.2
 build = {
   type = 'builtin',
   modules = {
-    ['compat_load'] = 'compat_load.lua'
+    ['compat_env'] = 'compat_env.lua'
   }
 }
 
@@ -306,9 +308,9 @@ build = {
 
 --[[ FILE test.lua
 
--- test.lua - test suite for compat_load module.
+-- test.lua - test suite for compat_env module.
 
-local CL = require 'compat_load'
+local CL = require 'compat_env'
 local load     = CL.load
 local loadfile = CL.loadfile
 local setfenv  = CL.setfenv
@@ -379,6 +381,7 @@ print 'OK'
 
 --[[ FILE CHANGES.txt
 0.2.20120124
+  Renamed module to compat_env (from compat_load)
   Add getfenv/setfenv functions
 
 0.1.20120121
