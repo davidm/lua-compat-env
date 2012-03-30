@@ -145,7 +145,7 @@ THE SOFTWARE.
 
 --]]---------------------------------------------------------------------
 
-local M = {_TYPE='module', _NAME='compat_env', _VERSION='0.2.20120124'}
+local M = {_TYPE='module', _NAME='compat_env', _VERSION='0.2.1.20120330'}
 
 local function check_chunk_type(s, mode)
   local nmode = mode or 'bt' 
@@ -257,6 +257,7 @@ else -- >= Lua 5.2
         error("'setfenv' cannot change environment of given object", 2)
       end -- else ignore no _ENV upvalue (warning: incompatible with 5.1)
     end
+    return f  -- invariant: original f ~= 0
   end
   -- [*] http://lua-users.org/lists/lua-l/2010-06/msg00313.html
 
@@ -351,13 +352,13 @@ os.remove'tmp.lua'
 -- test `setfenv`/`getfenv`
 x = 5
 local a,b=true; local function f(c) if a then return x,b,c end end
-setfenv(f, {x=3})
+assert(setfenv(f, {x=3}) == f)
 checkeq(f(), 3)
 checkeq(getfenv(f).x, 3)
 checkerr('cannot change', pcall(setfenv, string.len, {})) -- C function
 checkeq(getfenv(string.len), _G) -- C function
 local function g()
-  setfenv(1, {x=4})
+  assert(setfenv(1, {x=4}) == g)
   checkeq(getfenv(1).x, 4)
   return x
 end
@@ -380,6 +381,9 @@ print 'OK'
 --]]---------------------------------------------------------------------
 
 --[[ FILE CHANGES.txt
+0.2.1.20120330
+  Make setfenv return f.
+
 0.2.20120124
   Renamed module to compat_env (from compat_load)
   Add getfenv/setfenv functions
