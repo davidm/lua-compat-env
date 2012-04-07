@@ -101,7 +101,7 @@ INSTALLATION
   
     luarocks install compat-env
 
-  Otherwise, download <ttps://github.com/davidm/lua-compat-env>.
+  Otherwise, download <https://github.com/davidm/lua-compat-env>.
 
   You may simply copy compat_env.lua into your LUA_PATH.
   
