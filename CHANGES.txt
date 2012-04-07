@@ -1,0 +1,13 @@
+0.2.2.20120406
+  repackage on github.  files reorganized.
+  Renamed package compat-env (was compat_env).
+
+0.2.1.20120330
+  Make setfenv return f.
+
+0.2.20120124
+  Renamed module to compat_env (from compat_load)
+  Add getfenv/setfenv functions
+
+0.1.20120121
+  Initial public release

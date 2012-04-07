@@ -1,0 +1,27 @@
+package = 'compat-env'
+version = '$(_VERSION)-1'
+source = {
+  url = 'git://github.com/davidm/lua-compat-env.git',
+}
+description = {
+  summary = 'Lua 5.1/5.2 environment compatibility functions',
+  detailed = [=[
+    Provides Lua 5.1/5.2 environment related compatibility functions.
+    This includes implementations of Lua 5.2 style `load` and `loadfile`
+    for use in Lua 5.1.  It also includes Lua 5.1 style `getfenv` and `setfenv`
+    for use in Lua 5.2.
+  ]=],
+  license = 'MIT/X11',
+  homepage = 'https://github.com/davidm/lua-compat-env/',
+  maintainer = 'David Manura'
+}
+dependencies = {}  -- Lua 5.1 or 5.2
+build = {
+  type = 'builtin',
+  modules = {
+    ['compat_env'] = 'compat_env.lua'
+  }
+}
+-- VERSIONFROM="lua/compat_env.lua"
+-- ROCKVERSION="1"
+-- ROCKSCMVERSION="1"

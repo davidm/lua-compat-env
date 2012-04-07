@@ -1,0 +1,8 @@
+lua/compat_env.lua
+CHANGES.txt
+README.txt
+test.lua
+rockspec.in
+Makefile
+MANIFEST
+util.mk
