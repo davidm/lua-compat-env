@@ -76,6 +76,7 @@ if _G.setfenv then -- Lua 5.1
   M.setfenv = _G.setfenv
   M.getfenv = _G.getfenv
 else -- >= Lua 5.2
+  local debug = require "debug"
   -- helper function for `getfenv`/`setfenv`
   local function envlookup(f)
     local name, val
